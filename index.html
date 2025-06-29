@@ -1,0 +1,42 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>THEEB Wallet | الرئيسية</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { background:#000; color:white; font-family:'Cairo',sans-serif; padding:30px; text-align:center }
+    h1 { color:gold }
+    .btn { background:gold; color:black; font-weight:bold; padding:10px 20px; border-radius:8px; border:none; margin-top:20px }
+  </style>
+</head>
+<body>
+  <h1>👑 مرحبًا بك في THEEB Wallet</h1>
+  <p id="welcome">جارٍ التحقق من الجلسة...</p>
+  <button class="btn" onclick="logout()">🚪 تسجيل الخروج</button>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCZnhcTDSN-4ZbHgt8cT_9j3bRyO-nPNaI",
+      authDomain: "theeb-wallet.firebaseapp.com",
+      projectId: "theeb-wallet"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) return window.location.href = "login.html";
+      document.getElementById("welcome").textContent = `مرحبًا، ${user.email}`;
+    });
+
+    function logout() {
+      signOut(auth).then(() => window.location.href = "login.html");
+    }
+  </script>
+</body>
+</html>

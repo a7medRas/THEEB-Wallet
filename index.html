@@ -1,0 +1,271 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>محفظة THEEB Coin</title>
+  <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js@1.0.0-beta.36/dist/web3.min.js">
+    async function getTransactionHistory() {
+      try {
+        const events = await contract.getPastEvents("Transfer", {
+          filter: { from: userAccount },
+          fromBlock: 0,
+          toBlock: "latest"
+        });
+        if (events.length === 0) {
+          document.getElementById("txList").innerHTML = "<li>📭 لا توجد معاملات مرسلة حتى الآن</li>";
+        } else {
+          document.getElementById("txList").innerHTML = "";
+          events.slice(-10).reverse().forEach(event => {
+            const to = event.returnValues.to;
+            const value = (event.returnValues.value / 1e6).toLocaleString();
+            document.getElementById("txList").innerHTML += `<li>📤 أرسلت ${value} USDT إلى ${to}</li>`;
+          });
+        }
+      } catch (err) {
+        alert("خطأ أثناء تحميل السجل: " + err.message);
+      }
+    }
+
+</script>
+  
+<style>
+  body {
+    margin: 0;
+    font-family: 'Cairo', sans-serif;
+    background: linear-gradient(to bottom, #0f0f0f, #000);
+    color: #f5f5f5;
+  }
+  .wallet-container {
+    max-width: 480px;
+    margin: 30px auto;
+    padding: 20px;
+    border-radius: 20px;
+    background: #1a1a1a;
+    box-shadow: 0 0 25px 5px rgba(255,215,0,0.3);
+    text-align: center;
+  }
+  .user-info img {
+    width: 90px;
+    border-radius: 50%;
+    margin-bottom: 10px;
+    border: 3px solid gold;
+  }
+  .balance {
+    font-size: 28px;
+    margin: 15px 0;
+    color: gold;
+    font-weight: bold;
+  }
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    background-color: gold;
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  .btn:hover {
+    background-color: #e6c200;
+  }
+  input[type="text"], input[type="number"] {
+    width: 90%;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 15px;
+  }
+  .transactions {
+    text-align: right;
+    margin-top: 30px;
+    background-color: #222;
+    padding: 15px;
+    border-radius: 10px;
+  }
+  .lang-switch {
+    margin: 10px;
+    cursor: pointer;
+    color: gold;
+    text-align: left;
+  }
+  @media (max-width: 600px) {
+    .wallet-container {
+      width: 90%;
+    }
+    .btn {
+      font-size: 14px;
+    }
+  }
+</style>
+
+    
+</head>
+<body>
+  <div class="wallet-container">
+    <div class="lang-switch" onclick="switchLang()">Switch to English</div>
+    <div class="user-info">
+      <img src="https://i.ibb.co/sC9LYV1/user-avatar.png" alt="User Avatar">
+      <h2 id="username">المستخدم: ذيب</h2>
+      <p>ID: 112233</p>
+    </div>
+    <div class="balance">
+      رصيدك: <span id="balance">0</span> TBC
+    </div>
+    <button class="btn" onclick="connectWallet()">اتصل بـ MetaMask</button>
+    <button class="btn" onclick="sendTokens()">إرسال</button>
+    <button class="btn" onclick="payNow()">💳 دفع الآن</button>
+    <div id="payForm" style="display:none; margin-top: 20px; text-align: center;">
+      <input id="payAddress" type="text" placeholder="عنوان المستلم" style="padding:10px; width:80%; margin:5px;" /><br/>
+      <input id="payAmount" type="number" placeholder="المبلغ (TBC)" style="padding:10px; width:80%; margin:5px;" /><br/>
+      <button class="btn" onclick="confirmPay()">تأكيد الدفع</button>
+    </div>
+    <button class="btn" onclick="getTransactionHistory()">📜 تحميل سجل المعاملات</button>
+    <div class="transactions">
+      <h3>📜 سجل المعاملات:</h3>
+      <ul id="txList">
+        <li>لا توجد معاملات بعد.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const contractAddress = "0xA1B2C3D4E5F678901234567890abcdefABCDEF12";
+    const abi = [
+      {
+        "constant": true,
+        "inputs": [{ "name": "account", "type": "address" }],
+        "name": "balanceOf",
+        "outputs": [{ "name": "", "type": "uint256" }],
+        "type": "function"
+      },
+      {"anonymous": False, "inputs": [{"indexed": True, "name": "from", "type": "address"}, {"indexed": True, "name": "to", "type": "address"}, {"indexed": False, "name": "value", "type": "uint256"}], "name": "Transfer", "type": "event"},
+      {
+        "constant": false,
+        "inputs": [
+          { "name": "recipient", "type": "address" },
+          { "name": "amount", "type": "uint256" }
+        ],
+        "name": "transfer",
+        "outputs": [{ "name": "", "type": "bool" }],
+        "type": "function"
+      },
+      {"anonymous": False, "inputs": [{"indexed": True, "name": "from", "type": "address"}, {"indexed": True, "name": "to", "type": "address"}, {"indexed": False, "name": "value", "type": "uint256"}], "name": "Transfer", "type": "event"}
+    ];
+
+    let arabic = true;
+    let web3;
+    let contract;
+    let userAccount;
+
+    const langData = {
+      ar: {
+        connect: "اتصل بـ MetaMask",
+        send: "إرسال",
+        balance: "رصيدك: ",
+        user: "المستخدم: ",
+        txTitle: "📜 سجل المعاملات:",
+        noTx: "لا توجد معاملات بعد.",
+        switch: "Switch to English"
+      },
+      en: {
+        connect: "Connect to MetaMask",
+        send: "Send",
+        balance: "Your balance: ",
+        user: "User: ",
+        txTitle: "📜 Transaction History:",
+        noTx: "No transactions yet.",
+        switch: "التبديل للعربية"
+      }
+    };
+
+    function switchLang() {
+      arabic = !arabic;
+      const lang = arabic ? 'ar' : 'en';
+      document.querySelector('.btn:nth-of-type(1)').innerText = langData[lang].connect;
+      document.querySelector('.btn:nth-of-type(2)').innerText = langData[lang].send;
+      document.querySelector('.balance').innerHTML = langData[lang].balance + `<span id="balance">0</span> TBC`;
+      document.getElementById('username').innerText = langData[lang].user + 'ذيب';
+      document.querySelector('h3').innerText = langData[lang].txTitle;
+      document.getElementById('txList').innerHTML = `<li>${langData[lang].noTx}</li>`;
+      document.querySelector('.lang-switch').innerText = langData[lang].switch;
+    }
+
+    async function connectWallet() {
+      if (typeof window.ethereum !== 'undefined') {
+        web3 = new Web3(window.ethereum);
+        await ethereum.request({ method: 'eth_requestAccounts' });
+        const accounts = await web3.eth.getAccounts();
+        userAccount = accounts[0];
+
+        contract = new web3.eth.Contract(abi, contractAddress);
+        document.getElementById('txList').innerHTML = `<li>🟢 Wallet connected: ${userAccount}</li>`;
+
+        getBalance();
+      } else {
+        alert("يرجى تثبيت MetaMask.");
+      }
+    }
+
+    async function getBalance() {
+      const balance = await contract.methods.balanceOf(userAccount).call();
+      const decimals = 1e8;
+      document.getElementById('balance').innerText = (balance / decimals).toLocaleString();
+    }
+
+    async function sendTokens() {
+      const recipient = prompt("أدخل عنوان المستلم:");
+      const amount = prompt("أدخل كمية TBC للإرسال:");
+      if (!recipient || !amount) return;
+      const value = web3.utils.toBN(amount * 1e8);
+
+      try {
+        await contract.methods.transfer(recipient, value.toString()).send({ from: userAccount });
+        alert("✅ تم الإرسال بنجاح!");
+        getBalance();
+      } catch (error) {
+        alert("❌ فشل الإرسال: " + error.message);
+      }
+    }
+  
+);
+    alert("✅ تم الدفع بنجاح!");
+    getBalance();
+    document.getElementById("txList").innerHTML += `<li>💳 دفعت ${amount} TBC إلى ${recipient}</li>`;
+  } catch (err) {
+    alert("فشل الدفع: " + err.message);
+  }
+}
+
+    async function getTransactionHistory() {
+      try {
+        const events = await contract.getPastEvents("Transfer", {
+          filter: { from: userAccount },
+          fromBlock: 0,
+          toBlock: "latest"
+        });
+        if (events.length === 0) {
+          document.getElementById("txList").innerHTML = "<li>📭 لا توجد معاملات مرسلة حتى الآن</li>";
+        } else {
+          document.getElementById("txList").innerHTML = "";
+          events.slice(-10).reverse().forEach(event => {
+            const to = event.returnValues.to;
+            const value = (event.returnValues.value / 1e6).toLocaleString();
+            document.getElementById("txList").innerHTML += `<li>📤 أرسلت ${value} USDT إلى ${to}</li>`;
+          });
+        }
+      } catch (err) {
+        alert("خطأ أثناء تحميل السجل: " + err.message);
+      }
+    }
+
+</script>
+</body>
+</html>
